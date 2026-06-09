@@ -1,0 +1,62 @@
+---
+title: "Income Inequality and Happiness in Europe"
+subtitle: "Data collection and descriptive analysis workflow"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Project process
+
+1. Collect **macro-level** indicators from Eurostat (SDMX 3.0 API)
+2. Collect **micro-level** public happiness data from ESS
+3. Merge data on country codes and year for all European countries
+4. Produce descriptive summaries and visualisations
+5. Extend with modelling once model choices are finalized
+
+## Data collection scripts
+
+- `scripts/01_collect_eurostat_macro.R` (Eurostat API)
+- `scripts/02_collect_ess_micro.R` (ESS API)
+- `scripts/03_merge_micro_macro.R` (merge micro + macro)
+- `scripts/04_analysis_outline.R` (descriptives and plot)
+- `scripts/00_master.R` (run all scripts)
+
+## Descriptive results
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+df <- read_csv("data/processed/analysis_dataset.csv", show_col_types = FALSE)
+
+desc <- df |>
+  group_by(country_code, year) |>
+  summarise(
+    mean_happiness = mean(happiness, na.rm = TRUE),
+    mean_gini = mean(gini, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(desc, aes(mean_gini, mean_happiness, color = country_code)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  labs(
+    title = "Descriptive pattern: inequality and happiness",
+    x = "Gini coefficient",
+    y = "Mean happiness"
+  ) +
+  theme_minimal()
+```
+
+## Next steps
+
+- Finalize model strategy
+- Estimate and compare selected models
+- Add robustness checks and interpretative slides
