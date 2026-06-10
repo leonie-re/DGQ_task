@@ -1,6 +1,6 @@
 ---
 title: "Income Inequality and Happiness in Europe"
-subtitle: "Data collection and descriptive analysis workflow"
+subtitle: "Observational analysis workflow and findings"
 format:
   revealjs:
     theme: simple
@@ -11,52 +11,77 @@ execute:
   message: false
 ---
 
-## Project process
+## Research question and scope
 
-1. Collect **macro-level** indicators from Eurostat (SDMX 3.0 API)
-2. Collect **micro-level** public happiness data from ESS
-3. Merge data on country codes and year for all European countries
-4. Produce descriptive summaries and visualisations
-5. Extend with modelling once model choices are finalized
+- **Question:** How is inequality associated with happiness in Europe?
+- **Interpretation goal:** Observational association (not causal identification)
+- **Primary outcome:** `happy`
+- **Primary exposure:** `gini`
+- **Controls:** `unemployment_rate`, `agea`, `hinctnta`, `evmar`
+- **Population:** European countries, ESS rounds 7-11 (survey years 2014+)
+- **Missing-data policy:** retain all rows for descriptives, complete cases for models
 
-## Data collection scripts
+## Pipeline and canonical dataset
 
-- `scripts/01_collect_eurostat_macro.R` (Eurostat API)
-- `scripts/02_collect_ess_micro.R` (ESS API)
-- `scripts/03_merge_micro_macro.R` (merge micro + macro)
-- `scripts/04_analysis_outline.R` (descriptives and plot)
-- `scripts/00_master.R` (run all scripts)
+1. `scripts/01_collect_eurostat_macro.R`
+2. `scripts/02_collect_ess_micro.R`
+3. `scripts/03_merge_micro_macro.R`
+4. `scripts/04_analysis_outline.R`
+5. Canonical analysis dataset: `data/processed/analysis_dataset.csv`
 
-## Descriptive results
+## Data quality and coverage
 
 ```{r}
 library(readr)
 library(dplyr)
-library(ggplot2)
 
-df <- read_csv("data/processed/analysis_dataset.csv", show_col_types = FALSE)
-
-desc <- df |>
-  group_by(country_code, year) |>
-  summarise(
-    mean_happiness = mean(happiness, na.rm = TRUE),
-    mean_gini = mean(gini, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-ggplot(desc, aes(mean_gini, mean_happiness, color = country_code)) +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE, color = "black") +
-  labs(
-    title = "Descriptive pattern: inequality and happiness",
-    x = "Gini coefficient",
-    y = "Mean happiness"
-  ) +
-  theme_minimal()
+diag <- read_csv("data/processed/analysis_diagnostics.csv", show_col_types = FALSE)
+diag
 ```
 
-## Next steps
+## Stage A: descriptive diagnostics
 
-- Finalize model strategy
-- Estimate and compare selected models
-- Add robustness checks and interpretative slides
+```{r}
+library(ggplot2)
+
+knitr::include_graphics("output/figures/happiness_distribution.png")
+```
+
+```{r}
+#| fig-alt: "Scatterplot of country-year mean happiness versus mean gini"
+knitr::include_graphics("output/figures/happiness_vs_gini_country_year.png")
+```
+
+## Stage B/C/D: model workflow
+
+```{r}
+models <- read_csv("output/tables/model_results.csv", show_col_types = FALSE)
+models %>%
+  filter(term %in% c("gini", "gini_lag1", "log_gini", "I(gini^2)")) %>%
+  select(model, term, estimate, std_error, p_value, n)
+```
+
+## Robustness and sensitivity
+
+- Alternative transformations (`log(gini)`, quadratic term)
+- Lagged macro alignment (`gini_lag1`, `unemployment_rate_lag1`)
+- Balanced-panel restriction
+- Leave-one-country-out influence checks
+- Heterogeneity checks by income and age interactions
+
+```{r}
+#| fig-alt: "Leave-one-country-out gini coefficient stability plot"
+knitr::include_graphics("output/figures/leave_one_country_out_gini_coef.png")
+```
+
+## Interpretation and limitations
+
+- Results are interpreted as **associations**, not causal effects.
+- Country/year fixed effects reduce confounding from time-invariant country differences and common time shocks.
+- Remaining limitations include omitted variable bias, measurement comparability, and potential non-random missingness.
+
+## Reproducibility and acceptance checks
+
+- End-to-end run via `source("scripts/00_master.R")`
+- No broken path references (`data/processed`, `output/tables`, `output/figures`)
+- Reproducible diagnostics and model tables generated automatically

@@ -1,7 +1,6 @@
 # DGQ_task
 
-Project outline for collecting Eurostat (SDMX 3.0) macro data and ESS micro data,
-merging by European country codes, and producing descriptive analyses in R and Quarto.
+Pipeline for collecting Eurostat macro data and ESS micro data, merging by European country-year, and estimating observational inequality-happiness associations in R + Quarto.
 
 ## Scripts
 
@@ -11,14 +10,41 @@ merging by European country codes, and producing descriptive analyses in R and Q
 - `scripts/04_analysis_outline.R`
 - `scripts/00_master.R`
 
+## Analytical scope
+
+- Objective: observational association (non-causal)
+- Outcome: `happy`
+- Exposure: `gini`
+- Controls: `unemployment_rate`, `agea`, `hinctnta`, `evmar`
+- Population: European countries, ESS rounds 7-11 (survey years 2014+)
+- Missing-data policy: full sample for descriptives, complete-case sample for models
+
+## Canonical datasets and outputs
+
+- Canonical analysis data: `data/processed/analysis_dataset.csv`
+- Diagnostics: `data/processed/analysis_diagnostics.csv`
+- Scope metadata: `data/processed/analysis_scope.csv`
+- Figures: `output/figures/`
+- Tables: `output/tables/`
+
 ## Run pipeline
 
 ```r
-Sys.setenv(RUN_API_CALLS = "true") # set to "false" for local dry-run templates
+Sys.setenv(RUN_API_CALLS = "true")
 source("scripts/00_master.R")
 ```
 
-## Quarto presentation
+Set `RUN_API_CALLS = "false"` for dry-run template outputs.
 
-- `presentation.qmd`
-- Render with: `quarto render presentation.qmd`
+## Render presentation
+
+```bash
+quarto render presentation.qmd
+```
+
+## Validation / acceptance criteria
+
+- Master pipeline runs end-to-end and writes all expected output files.
+- Canonical path handoff is consistent (`data/processed/analysis_dataset.csv`).
+- Diagnostics include sample sizes, merge coverage, and missingness rates.
+- Model results are reproducible from generated pipeline outputs.
