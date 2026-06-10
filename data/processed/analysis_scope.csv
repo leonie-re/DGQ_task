@@ -1,8 +1,0 @@
-topic,value
-objective,Observational association (non-causal) between inequality and happiness
-primary_outcome,happy
-primary_exposure,gini
-macro_control,unemployment_rate
-micro_controls,"agea,hinctnta,evmar"
-target_population,"European countries, ESS rounds 7-11, survey years 2014+"
-missing_data_policy,Keep all rows in analysis dataset; use complete-case sample for model variables

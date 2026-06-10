@@ -11,21 +11,14 @@ Pipeline for collecting Eurostat macro data and ESS micro data, merging by Europ
 - `scripts/00_master.R`
 
 ## Analytical scope
+Are People living in unequal countries less happy?
 
 - Objective: observational association (non-causal)
-- Outcome: `happy`
-- Exposure: `gini`
-- Controls: `unemployment_rate`, `agea`, `hinctnta`, `evmar`
+- Outcome: `happy` 
+- Exposure: `gini` 
+- Controls: `unemployment_rate`, `agea`, `hinctnta` 
 - Population: European countries, ESS rounds 7-11 (survey years 2014+)
 - Missing-data policy: full sample for descriptives, complete-case sample for models
-
-## Canonical datasets and outputs
-
-- Canonical analysis data: `data/processed/analysis_dataset.csv`
-- Diagnostics: `data/processed/analysis_diagnostics.csv`
-- Scope metadata: `data/processed/analysis_scope.csv`
-- Figures: `output/figures/`
-- Tables: `output/tables/`
 
 ## Run pipeline
 

@@ -1,50 +1,27 @@
 #!/usr/bin/env Rscript
 
-input_path <- "data/processed/analysis_dataset.csv"
+input_path <- "data/analysis_data.csv"
 if (!file.exists(input_path)) {
   stop("Run scripts/03_merge_micro_macro.R first.")
+} else {
+df <- readr::read_csv(input_path, show_col_types = FALSE)
 }
 
-data <- readr::read_csv(input_path, show_col_types = FALSE)
 required_cols <- c(
   "country_code", "year", "happy", "gini", "unemployment_rate",
-  "agea", "hinctnta", "evmar", "model_complete_case", "gini_lag1", "unemployment_rate_lag1"
+  "agea", "hinctnta"
 )
+
 missing_cols <- setdiff(required_cols, names(data))
-if (length(missing_cols) > 0) {
-  stop("Analysis dataset missing columns: ", paste(missing_cols, collapse = ", "))
-}
 
-dir.create("output/figures", recursive = TRUE, showWarnings = FALSE)
-dir.create("output/tables", recursive = TRUE, showWarnings = FALSE)
+data <- df %>% 
+  select(all_of(required_cols)) %>% 
+  drop_na() %>%  
+  mutate(log_gini = if_else(gini > 0, log(gini), NA_real_))
 
-analysis_data <- data |> dplyr::filter(model_complete_case)
-if (nrow(analysis_data) == 0) stop("No complete-case observations for modelling.")
 
-tidy_lm <- function(model, model_name) {
-  sm <- summary(model)
-  coefs <- as.data.frame(sm$coefficients)
-  coefs$term <- rownames(coefs)
-  rownames(coefs) <- NULL
-  names(coefs) <- c("estimate", "std_error", "statistic", "p_value", "term")
-  coefs$model <- model_name
-  coefs$r_squared <- sm$r.squared
-  coefs$adj_r_squared <- sm$adj.r.squared
-  coefs$n <- stats::nobs(model)
-  coefs[, c("model", "term", "estimate", "std_error", "statistic", "p_value", "r_squared", "adj_r_squared", "n")]
-}
-
-# Stage A: descriptive diagnostics
-missingness <- data |>
-  dplyr::summarise(
-    dplyr::across(c(happy, gini, unemployment_rate, agea, hinctnta, evmar, gini_lag1),
-      ~ mean(is.na(.x)))
-  ) |>
-  tidyr::pivot_longer(everything(), names_to = "variable", values_to = "missing_rate")
-readr::write_csv(missingness, "output/tables/missingness_summary.csv")
-
-descriptive <- data |>
-  dplyr::group_by(country_code, year) |>
+descriptive <- data %>%
+  dplyr::group_by(country_code, year) %>%
   dplyr::summarise(
     mean_happy = mean(happy, na.rm = TRUE),
     mean_gini = mean(gini, na.rm = TRUE),
@@ -52,11 +29,13 @@ descriptive <- data |>
     n = dplyr::n(),
     .groups = "drop"
   )
-readr::write_csv(descriptive, "output/tables/country_year_descriptives.csv")
+
+readr::write_csv(descriptive, "data/country_year_descriptives.csv")
 
 p_scatter <- ggplot2::ggplot(descriptive, ggplot2::aes(x = mean_gini, y = mean_happy, color = country_code)) +
   ggplot2::geom_point(alpha = 0.7) +
-  ggplot2::geom_smooth(method = "lm", se = FALSE, color = "black") +
+  ggplot2::geom_smooth(method = "loess", se = F, color = "darkgreen", linetype = 1) +
+  ggplot2::geom_smooth(method = "lm", se = F, color = "lightgreen", linetype = 1) +
   ggplot2::labs(
     title = "Country-year happiness and inequality",
     x = "Mean Gini",
@@ -66,86 +45,98 @@ p_scatter <- ggplot2::ggplot(descriptive, ggplot2::aes(x = mean_gini, y = mean_h
 ggplot2::ggsave("output/figures/happiness_vs_gini_country_year.png", p_scatter, width = 9, height = 6)
 
 p_hist_happy <- ggplot2::ggplot(data, ggplot2::aes(x = happy)) +
-  ggplot2::geom_histogram(bins = 11, fill = "steelblue", color = "white") +
+  ggplot2::geom_histogram(bins = 11, fill = "darkgreen", color = "white") +
   ggplot2::labs(title = "Distribution of happiness", x = "Happiness", y = "Count") +
   ggplot2::theme_minimal()
 ggplot2::ggsave("output/figures/happiness_distribution.png", p_hist_happy, width = 8, height = 5)
 
-# Stage B/C/D: inferential models
-m1 <- stats::lm(happy ~ gini, data = analysis_data)
-m2 <- stats::lm(happy ~ gini + unemployment_rate, data = analysis_data)
-m3 <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar), data = analysis_data)
-m4_fe <- lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar) + factor(country_code) + factor(year), data = analysis_data)
+#------------------------------------------------------------------------------
+# Inferential models: Country and Year Random intercept Models (Multi-level Models)
+#------------------------------------------------------------------------------
+m1 <- lmer(happy ~ gini + (1 | country_code) + (1 | year), data = data)
+m2 <- lmer(happy ~ gini + unemployment_rate + (1 | country_code) + (1 | year), data = data)
+m3 <- lmer(happy ~ gini + unemployment_rate + hinctnta + (1 | country_code) + (1 | year), data = data)
 
-# Robustness
-# Gini should be strictly positive for log transform; non-positive values are dropped for the log specification.
-analysis_data <- analysis_data |>
-  dplyr::mutate(log_gini = dplyr::if_else(gini > 0, log(gini), NA_real_))
-m5_log <- stats::lm(happy ~ log_gini + unemployment_rate + agea + hinctnta + factor(evmar),
-  data = analysis_data |> dplyr::filter(!is.na(log_gini)))
-m6_quad <- stats::lm(happy ~ gini + I(gini^2) + unemployment_rate + agea + hinctnta + factor(evmar), data = analysis_data)
-m7_lag <- stats::lm(happy ~ gini_lag1 + unemployment_rate_lag1 + agea + hinctnta + factor(evmar),
-  data = analysis_data |> dplyr::filter(!is.na(gini_lag1), !is.na(unemployment_rate_lag1)))
+modelsummary(list(m1,m2,m3), stars = T)
 
-country_year_counts <- analysis_data |>
-  dplyr::distinct(country_code, year) |>
-  dplyr::count(country_code, name = "n_years")
-max_years <- max(country_year_counts$n_years, na.rm = TRUE)
-balanced_countries <- country_year_counts |>
-  dplyr::filter(n_years == max_years) |>
-  dplyr::pull(country_code)
-m8_balanced <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar),
-  data = analysis_data |> dplyr::filter(country_code %in% balanced_countries))
+# Pooled (Robustness)
+m1_pooled <- lm_robust(happy ~ gini + factor(year), 
+                       data = data, 
+                       clusters = country_code)
+m2_pooled <- lm_robust(happy ~ gini + unemployment_rate + factor(year), 
+                       data = data, 
+                       clusters = country_code)
+m3_pooled <- lm_robust(happy ~ gini + unemployment_rate + hinctnta + factor(year), 
+                       data = data, 
+                       clusters = country_code)
 
-countries <- sort(unique(analysis_data$country_code))
-country_splits <- split(analysis_data, analysis_data$country_code)
-leave_one_country_out <- lapply(countries, function(cty) {
-  reduced <- dplyr::bind_rows(country_splits[names(country_splits) != cty])
-  mod <- tryCatch(
-    stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar), data = reduced),
-    error = function(e) NULL
-  )
-  gini_coef <- NA_real_
-  if (!is.null(mod) && "gini" %in% names(stats::coef(mod))) {
-    gini_coef <- stats::coef(mod)[["gini"]]
-  }
-  tibble::tibble(country_left_out = cty, gini_coef = gini_coef)
-}) |>
-  dplyr::bind_rows()
-readr::write_csv(leave_one_country_out, "output/tables/leave_one_country_out.csv")
+modelsummary(list(m1_pooled,m2_pooled,m3_pooled), stars = T)
 
-plot_leave_one_country_out <- ggplot2::ggplot(leave_one_country_out, ggplot2::aes(x = reorder(country_left_out, gini_coef), y = gini_coef)) +
-  ggplot2::geom_col(fill = "gray40") +
-  ggplot2::coord_flip() +
-  ggplot2::labs(title = "Leave-one-country-out: gini coefficient stability", x = "Country left out", y = "Estimated gini coefficient") +
-  ggplot2::theme_minimal()
-ggplot2::ggsave("output/figures/leave_one_country_out_gini_coef.png", plot_leave_one_country_out, width = 9, height = 8)
+# Gini should be strictly positive for log transform; non-positive values should be dropped for the log specification.
 
-m9_income_interaction <- stats::lm(happy ~ gini * hinctnta + unemployment_rate + agea + factor(evmar), data = analysis_data)
-m10_age_interaction <- stats::lm(happy ~ gini * agea + unemployment_rate + hinctnta + factor(evmar), data = analysis_data)
+m1 <- lmer(happy ~ log_gini + (1 | country_code) + (1 | year), data = data)
+m2 <- lmer(happy ~ log_gini + unemployment_rate + (1 | country_code) + (1 | year), data = data)
+m3 <- lmer(happy ~ log_gini + unemployment_rate + hinctnta + (1 | country_code) + (1 | year), data = data)
 
-model_results <- dplyr::bind_rows(
-  tidy_lm(m1, "M1_bivariate"),
-  tidy_lm(m2, "M2_macro_control"),
-  tidy_lm(m3, "M3_micro_macro_controls"),
-  #tidy_lm(m4_fe, "M4_country_year_FE"),
-  tidy_lm(m5_log, "M5_log_gini"),
-  tidy_lm(m6_quad, "M6_quadratic_gini"),
-  tidy_lm(m7_lag, "M7_lagged_macro"),
-  tidy_lm(m8_balanced, "M8_balanced_sample"),
-  tidy_lm(m9_income_interaction, "M9_income_interaction"),
-  tidy_lm(m10_age_interaction, "M10_age_interaction")
+modelsummary(list(m1,m2,m3), stars = T)
+
+# Pooled
+m1_pooled <- lm_robust(happy ~ log_gini + factor(year), 
+                       data = data, 
+                       clusters = country_code)
+m2_pooled <- lm_robust(happy ~ log_gini + unemployment_rate + factor(year), 
+                       data = data, 
+                       clusters = country_code)
+m3_pooled <- lm_robust(happy ~ log_gini + unemployment_rate + hinctnta + factor(year), 
+                       data = data, 
+                       clusters = country_code)
+
+# -------------------------------------------------------------------------
+# 3. VISUALIZE EFFECT SIZES (COEFFICIENT PLOTS)
+# -------------------------------------------------------------------------
+# This creates a plot comparing the point estimates and confidence intervals.
+
+# Compare the full models (Model 3 variants)
+model_list <- list(
+  "Multilevel (Linear)" = m3_lin,
+  "Pooled OLS (Linear)" = m3_pooled_lin,
+  "Multilevel (Log)"    = m3_log,
+  "Pooled OLS (Log)"    = m3_pooled_log
 )
-readr::write_csv(model_results, "output/tables/model_results.csv")
 
-analysis_summary <- tibble::tribble(
-  ~stage, ~description,
-  "A", "Descriptive diagnostics produced (missingness, distributions, country-year summaries)",
-  "B", "Bivariate inequality-happiness relationship estimated",
-  "C", "Multivariable models estimated with macro and micro controls",
-  "D", "Country/year fixed-effects model estimated for within-country temporal association",
-  "Robustness", "Log, nonlinear, lagged, balanced-panel, leave-one-country-out, and heterogeneity checks estimated"
-)
-readr::write_csv(analysis_summary, "output/tables/analysis_stages_summary.csv")
+# Plot coefficients (excluding intercepts and year fixed effects for clarity)
+modelplot(model_list, coef_omit = "Intercept|factor\\(year\\)") +
+  theme_minimal() +
+  labs(title = "Effect Sizes on Happiness Across Specifications",
+       x = "Coefficient Estimate (Effect Size)",
+       y = "Predictor")
 
-message("Analysis outputs written to output/figures and output/tables")
+
+# -------------------------------------------------------------------------
+# 4. PREDICTED VALUES (MARGINAL EFFECTS PLOTS)
+# -------------------------------------------------------------------------
+# Let's predict how happiness changes across the actual range of your data
+# using your most complete multilevel models (m3_lin and m3_log).
+
+# --- Effect of Gini (Linear vs Log) ---
+plot_predictions(m3_lin, condition = "gini", re.form = NA) + 
+  theme_minimal() + labs(title = "Predicted Happiness by Gini (Linear Model)", x = "Gini", y = "Predicted Happiness")
+
+plot_predictions(m3_log, condition = "log_gini", re.form = NA) + 
+  theme_minimal() + labs(title = "Predicted Happiness by Log Gini (Log Model)", x = "Log(Gini)", y = "Predicted Happiness")
+
+# --- Effect of Unemployment Rate ---
+plot_predictions(m3_lin, condition = "unemployment_rate", re.form = NA) + 
+  theme_minimal() + labs(title = "Predicted Happiness by Unemployment Rate", x = "Unemployment Rate", y = "Predicted Happiness")
+
+# --- Effect of Income (hinctnta) ---
+plot_predictions(m3_lin, condition = "hinctnta", re.form = NA) + 
+  theme_minimal() + labs(title = "Predicted Happiness by Income Level", x = "Household Income Scale", y = "Predicted Happiness")
+
+
+# -------------------------------------------------------------------------
+# 5. BONUS: EXTRACT EXACT NUMERICAL MARGINAL EFFECTS
+# -------------------------------------------------------------------------
+# If you want a clean table showing the average slope/effect size for each variable:
+summary(avg_slopes(m3_lin, re.form = NA))
+summary(avg_slopes(m3_log, re.form = NA))
