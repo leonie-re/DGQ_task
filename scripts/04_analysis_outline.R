@@ -3,13 +3,6 @@
 # Analysis outline script.
 # Includes descriptive visualisations that can be re-used in Quarto presentations.
 
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readr)
-  library(ggplot2)
-})
-
-main <- function() {
   input_path <- "data/processed/analysis_dataset.csv"
 
   if (!file.exists(input_path)) {
@@ -41,9 +34,3 @@ main <- function() {
     theme_minimal()
 
   ggsave("output/figures/happiness_vs_gini.png", p1, width = 9, height = 6)
-
-  # Placeholder for future model decisions.
-  message("Analysis outline complete. Add model specifications once finalized.")
-}
-
-main()

@@ -1,68 +1,126 @@
 #!/usr/bin/env Rscript
+# =============================================================================
+# ess_micro.R
+# Ruft Mikrodaten aus dem European Social Survey (ESS) über die Sikt-API ab.
+# Gespeichert unter data/raw/ess_micro.csv.
+# =============================================================================
+ESS_VARS <- c(
+  "idno",     # Respondenten-ID
+  "cntry",    # Ländercode
+  "essround", # ESS-Runde (für den späteren Merge mit Makrodaten)
+  "proddate",
+  "agea",     # Alter
+  "happy",    # Glück (0–10)
+  "evmar",  # Familienstand
+  "hinctnta" # Haushaltseinkommen (Dezile)
+)
 
-# Collect micro-level public happiness data from ESS API.
-# Data are saved to data/raw/ess_micro.csv.
 
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(httr2)
-  library(readr)
-  library(jsonlite)
-  library(countrycode)
-})
+url <- "https://api.ess.sikt.no/v1/data/dataFile/10.21338/ess6e02_6?userId=62ac71b7-13fc-458d-b147-34543a42669b&fileFormat=csv"
+df_micro <- read.csv(url)
 
-get_european_iso2 <- function() {
-  countrycode::codelist_panel |>
-    dplyr::filter(continent == "Europe", !is.na(iso2c)) |>
-    dplyr::distinct(iso2c) |>
-    dplyr::pull(iso2c) |>
-    toupper() |>
-    sort()
-}
+output_data = "data/raw/ess_micro.csv"
 
-fetch_ess_round <- function(round = 10) {
-  # ESS JSON API endpoint (replace/extend with specific endpoint as needed).
-  url <- sprintf("https://api.europeansocialsurvey.org/v2/rounds/%s", round)
-  response <- request(url) |> req_perform()
-  payload <- resp_body_string(response)
-  data <- jsonlite::fromJSON(payload, flatten = TRUE)
-  data_frame <- as.data.frame(data$data)
 
-  # The exact schema varies by endpoint; this keeps the script as a clear outline.
-  # Update field names below if your selected ESS endpoint differs.
-  extract_or_na <- function(df, name, default = NA) {
-    if (name %in% names(df)) {
-      df[[name]]
-    } else {
-      rep(default, nrow(df))
-    }
-  }
-
-  tibble::tibble(
-    respondent_id = as.character(extract_or_na(data_frame, "id")),
-    country_code = as.character(extract_or_na(data_frame, "cntry")),
-    year = as.integer(extract_or_na(data_frame, "inwyr")),
-    happiness = as.numeric(extract_or_na(data_frame, "happy")),
-    weight = as.numeric(extract_or_na(data_frame, "dweight"))
+# Fetch einzelner Rounds ------------
+fetch_ess_round <- function(doi, user_id) {
+  
+  url <- paste0(
+    "https://api.ess.sikt.no/v1/data/dataFile/",
+    doi
   )
+  
+  message("Abruf ESS DOI: ", doi, " ...")
+  
+  resp <- request(url) %>%
+    req_url_query(
+      userId     = user_id,
+      fileFormat = "csv"
+    ) %>%
+    req_timeout(120) %>%                        # große Dateien brauchen Zeit
+    req_error(is_error = \(r) FALSE) %>%
+    req_perform()
+  
+  if (resp_status(resp) != 200L) {
+    warning("HTTP ", resp_status(resp), " für DOI '", doi,
+            "': ", resp_body_string(resp))
+    return(tibble())
+  }
+  
+  # CSV direkt aus dem Response-Body einlesen
+  raw_csv <- resp_body_string(resp)
+  df      <- read_csv(I(raw_csv), show_col_types = FALSE, na = c("", "NA"))
+  
+  # Nur gewünschte Spalten behalten; fehlende mit NA auffüllen
+  missing_vars <- setdiff(ESS_VARS, names(df))
+  if (length(missing_vars) > 0) {
+    warning("Fehlende Variablen in ", doi, ": ",
+            paste(missing_vars, collapse = ", "), " — werden als NA gesetzt.")
+  }
+  for (v in missing_vars) df[[v]] <- NA
+  
+  df %>% select(all_of(ESS_VARS))
 }
 
-main <- function() {
-  european_iso2 <- get_european_iso2()
-  output_file <- "data/raw/ess_micro.csv"
-  dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
-
+# -----------------------------------------------------------------------------
+# Alle konfigurierten Runden abrufen, zusammenführen, speichern
+# -----------------------------------------------------------------------------
+ess_load <- function() {
+  
+  output_path <- file.path("data", "raw", "ess_micro.csv")
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  
   if (!identical(tolower(Sys.getenv("RUN_API_CALLS", "false")), "true")) {
-    message("RUN_API_CALLS is not true. Writing an empty micro template to ", output_file)
-    readr::write_csv(tibble::tibble(respondent_id = character(), country_code = character(), year = integer(), happiness = double(), weight = double()), output_file)
+    message("RUN_API_CALLS ist nicht 'aktiv'. Schreibe leere Vorlage nach ", output_path)
+    write_csv(
+      tibble(idno     = integer(),
+             cntry    = character(),
+             essround = integer(),
+             proddate = date(),
+             agea     = integer(),
+             happy    = integer(),
+             ev_mar  = integer(),
+             hinctnta = integer()),
+      output_path
+    )
     return(invisible(NULL))
   }
-
-  ess_micro <- fetch_ess_round(round = 10) |>
-    filter(country_code %in% european_iso2)
-
-  readr::write_csv(ess_micro, output_file)
-  message("Saved ESS micro data to ", output_file)
+  
+  user_id <- Sys.getenv("ESS_USER_ID", "62ac71b7-13fc-458d-b147-34543a42669b")
+  
+  # Zu ladende Runden: DOI → Runden-Nummer
+  # Entferne Runden, die du nicht benötigst, oder ergänze weitere.
+  rounds <- list(
+    list(doi = "10.21338/ess6e02_6",   round = 6),
+    list(doi = "10.21338/ess7e02_2",   round = 7),
+    list(doi = "10.21338/ess8e02_3",   round = 8),
+    list(doi = "10.21338/ess9e03_3",   round = 9),
+    list(doi = "10.21338/ess10e03_3",  round = 10),
+    list(doi = "10.21338/ess11e04_1", round = 11)
+  )
+  
+  # Parallele Downloads:
+  plan(multisession, workers = 3) 
+  
+  dfs <- future_lapply(rounds, function(r) {
+    fetch_ess_round(doi = r$doi, user_id = user_id)
+  })
+  # Zurücksetzen
+  on.exit(plan(sequential))
+  
+  # Leere Ergebnisse entfernen und zusammenführen
+  dfs       <- Filter(Negate(is.null), dfs)
+  ess_micro <- bind_rows(dfs) %>%
+    arrange(cntry, essround, idno) 
+  
+  message("Zeilen gesamt: ", nrow(ess_micro),
+          " | Länder: ", n_distinct(ess_micro$cntry),
+          " | Runden: ", n_distinct(ess_micro$essround))
+  
+  write_csv(ess_micro, output_path)
+  message("Gespeichert: ", output_path)
+  
+  invisible(ess_micro) 
 }
 
-main()
+ess_load()
