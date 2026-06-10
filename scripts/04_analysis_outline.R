@@ -94,9 +94,11 @@ balanced_countries <- country_year_counts |>
 m8_balanced <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar),
   data = analysis_data |> dplyr::filter(country_code %in% balanced_countries))
 
-leave_one_country_out <- lapply(sort(unique(analysis_data$country_code)), function(cty) {
-  mod <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar),
-    data = analysis_data |> dplyr::filter(country_code != cty))
+countries <- sort(unique(analysis_data$country_code))
+country_splits <- split(analysis_data, analysis_data$country_code)
+leave_one_country_out <- lapply(countries, function(cty) {
+  reduced <- dplyr::bind_rows(country_splits[names(country_splits) != cty])
+  mod <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar), data = reduced)
   tibble::tibble(country_left_out = cty, gini_coef = coef(mod)[["gini"]])
 }) |>
   dplyr::bind_rows()

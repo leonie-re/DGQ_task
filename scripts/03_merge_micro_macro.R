@@ -60,7 +60,7 @@ micro <- ess_raw |>
     country_code = toupper(cntry),
     essround = as.integer(essround),
     proddate = proddate,
-    agea = dplyr::if_else(agea %in% c(999) | agea < 15 | agea > 120, NA_real_, as.numeric(agea)),
+    agea = dplyr::if_else(agea == 999 | agea < 15 | agea > 120, NA_real_, as.numeric(agea)),
     happy = dplyr::if_else(happy < 0 | happy > 10, NA_real_, as.numeric(happy)),
     evmar = dplyr::if_else(evmar %in% c(77, 88, 99), NA_real_, as.numeric(evmar)),
     hinctnta = dplyr::if_else(hinctnta < 1 | hinctnta > 10, NA_real_, as.numeric(hinctnta))

@@ -4,11 +4,11 @@ Pipeline for collecting Eurostat macro data and ESS micro data, merging by Europ
 
 ## Scripts
 
-- `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/scripts/01_collect_eurostat_macro.R`
-- `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/scripts/02_collect_ess_micro.R`
-- `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/scripts/03_merge_micro_macro.R`
-- `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/scripts/04_analysis_outline.R`
-- `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/scripts/00_master.R`
+- `scripts/01_collect_eurostat_macro.R`
+- `scripts/02_collect_ess_micro.R`
+- `scripts/03_merge_micro_macro.R`
+- `scripts/04_analysis_outline.R`
+- `scripts/00_master.R`
 
 ## Analytical scope
 
@@ -21,11 +21,11 @@ Pipeline for collecting Eurostat macro data and ESS micro data, merging by Europ
 
 ## Canonical datasets and outputs
 
-- Canonical analysis data: `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/data/processed/analysis_dataset.csv`
-- Diagnostics: `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/data/processed/analysis_diagnostics.csv`
-- Scope metadata: `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/data/processed/analysis_scope.csv`
-- Figures: `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/output/figures/`
-- Tables: `/home/runner/work/DGQ_task/DGQ_task/leonie-re/DGQ_task/output/tables/`
+- Canonical analysis data: `data/processed/analysis_dataset.csv`
+- Diagnostics: `data/processed/analysis_diagnostics.csv`
+- Scope metadata: `data/processed/analysis_scope.csv`
+- Figures: `output/figures/`
+- Tables: `output/tables/`
 
 ## Run pipeline
 
