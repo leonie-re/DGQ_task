@@ -1,0 +1,67 @@
+---
+title: "Presentation"
+author: "Leonie Rettig"
+format: revealjs
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
+
+## Forschungsfrage
+
+#### Wie wirkt sich Ungleichheit auf das Glücklich sein aus? 
+
+#### Datengrundlage: 
+
+- European Social Survey - Europäische Umfragedaten zu Politischen und Gesellschaftlichen Themen
+
+- Gini-Koeffizient und Arbeitslosenrate in Europäischen Ländern über Eurostat
+
+- Zeithorizont: Ab 2014 - bei jeder neuen ESS-Erhebung aktualisierbar.
+
+## API Abfrage Eurostat
+
+```{r}
+# hier kommt eine Zusammenfassung über die Funktionen die ich verwende um die Daten abzufragen 
+```
+
+## API Abfrage ESS
+
+```{r}
+# hier kommt eine Zusammenfassung über die Funktionen die ich verwende um die Daten abzufragen 
+```
+
+## Datenqualität: ESS
+
+- ESS-Umfragedaten sind repräsentativ und wissenschaftlich geprüft.
+
+  ```{r}
+  gg_miss_var(ess, facet = essround)
+  # Missings exisitieren nur wo keine Variable gefunden wurde, heißt Rekodierung notwendig.
+  ```
+
+## 
+Ergebnisse
+
+## Automatisierung des Ansatzes/Skript
+
+```{r}
+# Linux/Mac
+library(cronR)
+cmd <- cron_rscript("/pfad/zu/eurostat_macro.R",
+                    rscript_args = "",
+                    log_append = TRUE)
+cron_add(cmd, frequency = "monthly", at = "06:00",
+         id = "eurostat_macro", description = "Eurostat Datenabruf")
+
+# Windows
+library(taskscheduleR)
+taskscheduler_create(
+  taskname = "eurostat_macro",
+  rscript  = "/pfad/zu/eurostat_macro.R",
+  schedule = "MONTHLY",
+  starttime = "06:00"
+)
+```
