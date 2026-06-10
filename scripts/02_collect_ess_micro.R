@@ -57,7 +57,10 @@ ess_load <- function() {
     return(invisible(NULL))
   }
 
-  user_id <- Sys.getenv("ESS_USER_ID", "62ac71b7-13fc-458d-b147-34543a42669b")
+  user_id <- Sys.getenv("ESS_USER_ID", "")
+  if (!nzchar(user_id)) {
+    stop("Set ESS_USER_ID before running with RUN_API_CALLS=true.")
+  }
 
   rounds <- list(
     list(doi = "10.21338/ess6e02_6", round = 6),

@@ -7,8 +7,14 @@ assert_required_columns <- function(df, cols, df_name) {
   }
 }
 
+# ESS round -> survey year mapping for temporal alignment to annual Eurostat data
+# (configured according to ESS round fieldwork timing).
 round_to_year <- c(`6` = 2012L, `7` = 2014L, `8` = 2016L, `9` = 2018L, `10` = 2020L, `11` = 2023L)
 target_ess_rounds <- 7:11
+ESS_MISSING_CODES <- c(77, 88, 99)
+AGE_MISSING_CODE <- 999
+MIN_AGE <- 15
+MAX_AGE <- 120
 age_group_breaks <- c(15, 30, 45, 60, 120)
 age_group_labels <- c("15-29", "30-44", "45-59", "60+")
 
@@ -62,9 +68,9 @@ micro <- ess_raw |>
     country_code = toupper(cntry),
     essround = as.integer(essround),
     proddate = proddate,
-    agea = dplyr::if_else(agea == 999 | agea < 15 | agea > 120, NA_real_, as.numeric(agea)),
+    agea = dplyr::if_else(agea == AGE_MISSING_CODE | agea < MIN_AGE | agea > MAX_AGE, NA_real_, as.numeric(agea)),
     happy = dplyr::if_else(happy < 0 | happy > 10, NA_real_, as.numeric(happy)),
-    evmar = dplyr::if_else(evmar %in% c(77, 88, 99), NA_real_, as.numeric(evmar)),
+    evmar = dplyr::if_else(evmar %in% ESS_MISSING_CODES, NA_real_, as.numeric(evmar)),
     hinctnta = dplyr::if_else(hinctnta < 1 | hinctnta > 10, NA_real_, as.numeric(hinctnta))
   ) |>
   dplyr::mutate(

@@ -100,8 +100,15 @@ countries <- sort(unique(analysis_data$country_code))
 country_splits <- split(analysis_data, analysis_data$country_code)
 leave_one_country_out <- lapply(countries, function(cty) {
   reduced <- dplyr::bind_rows(country_splits[names(country_splits) != cty])
-  mod <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar), data = reduced)
-  tibble::tibble(country_left_out = cty, gini_coef = coef(mod)[["gini"]])
+  mod <- tryCatch(
+    stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar), data = reduced),
+    error = function(e) NULL
+  )
+  gini_coef <- NA_real_
+  if (!is.null(mod) && "gini" %in% names(stats::coef(mod))) {
+    gini_coef <- stats::coef(mod)[["gini"]]
+  }
+  tibble::tibble(country_left_out = cty, gini_coef = gini_coef)
 }) |>
   dplyr::bind_rows()
 readr::write_csv(leave_one_country_out, "output/tables/leave_one_country_out.csv")
