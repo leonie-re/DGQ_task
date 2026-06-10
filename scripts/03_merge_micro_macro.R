@@ -9,6 +9,8 @@ assert_required_columns <- function(df, cols, df_name) {
 
 round_to_year <- c(`6` = 2012L, `7` = 2014L, `8` = 2016L, `9` = 2018L, `10` = 2020L, `11` = 2023L)
 target_ess_rounds <- 7:11
+age_group_breaks <- c(15, 30, 45, 60, 120)
+age_group_labels <- c("15-29", "30-44", "45-59", "60+")
 
 analysis_scope <- tibble::tribble(
   ~topic, ~value,
@@ -99,8 +101,7 @@ analysis_data <- micro |>
     gini_centered = gini - mean(gini, na.rm = TRUE),
     gini_scaled = as.numeric(scale(gini)),
     happy_scaled = as.numeric(scale(happy)),
-    age_group = cut(agea, breaks = c(15, 30, 45, 60, 120), right = FALSE,
-      labels = c("15-29", "30-44", "45-59", "60+")),
+    age_group = cut(agea, breaks = age_group_breaks, right = FALSE, labels = age_group_labels),
     income_decile = hinctnta,
     model_complete_case = stats::complete.cases(happy, gini, unemployment_rate, agea, hinctnta, evmar)
   ) |>

@@ -78,8 +78,10 @@ m3 <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evma
 m4_fe <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar) + factor(country_code) + factor(year), data = analysis_data)
 
 # Robustness
-analysis_data <- analysis_data |> dplyr::mutate(log_gini = log(gini))
-m5_log <- stats::lm(happy ~ log_gini + unemployment_rate + agea + hinctnta + factor(evmar), data = analysis_data)
+analysis_data <- analysis_data |>
+  dplyr::mutate(log_gini = dplyr::if_else(gini > 0, log(gini), NA_real_))
+m5_log <- stats::lm(happy ~ log_gini + unemployment_rate + agea + hinctnta + factor(evmar),
+  data = analysis_data |> dplyr::filter(!is.na(log_gini)))
 m6_quad <- stats::lm(happy ~ gini + I(gini^2) + unemployment_rate + agea + hinctnta + factor(evmar), data = analysis_data)
 m7_lag <- stats::lm(happy ~ gini_lag1 + unemployment_rate_lag1 + agea + hinctnta + factor(evmar),
   data = analysis_data |> dplyr::filter(!is.na(gini_lag1), !is.na(unemployment_rate_lag1)))
@@ -104,12 +106,12 @@ leave_one_country_out <- lapply(countries, function(cty) {
   dplyr::bind_rows()
 readr::write_csv(leave_one_country_out, "output/tables/leave_one_country_out.csv")
 
-p_loo <- ggplot2::ggplot(leave_one_country_out, ggplot2::aes(x = reorder(country_left_out, gini_coef), y = gini_coef)) +
+plot_leave_one_country_out <- ggplot2::ggplot(leave_one_country_out, ggplot2::aes(x = reorder(country_left_out, gini_coef), y = gini_coef)) +
   ggplot2::geom_col(fill = "gray40") +
   ggplot2::coord_flip() +
   ggplot2::labs(title = "Leave-one-country-out: gini coefficient stability", x = "Country left out", y = "Estimated gini coefficient") +
   ggplot2::theme_minimal()
-ggplot2::ggsave("output/figures/leave_one_country_out_gini_coef.png", p_loo, width = 9, height = 8)
+ggplot2::ggsave("output/figures/leave_one_country_out_gini_coef.png", plot_leave_one_country_out, width = 9, height = 8)
 
 m9_income_interaction <- stats::lm(happy ~ gini * hinctnta + unemployment_rate + agea + factor(evmar), data = analysis_data)
 m10_age_interaction <- stats::lm(happy ~ gini * agea + unemployment_rate + hinctnta + factor(evmar), data = analysis_data)
