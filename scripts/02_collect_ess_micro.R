@@ -59,7 +59,7 @@ ess_load <- function() {
 
   user_id <- Sys.getenv("ESS_USER_ID", "")
   if (!nzchar(user_id)) {
-    stop("Set ESS_USER_ID before running with RUN_API_CALLS=true.")
+    stop("Set ESS_USER_ID environment variable (e.g., Sys.setenv(ESS_USER_ID=\"your-id\")) before running with RUN_API_CALLS=true.")
   }
 
   rounds <- list(

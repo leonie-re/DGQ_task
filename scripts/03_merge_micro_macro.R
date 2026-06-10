@@ -74,7 +74,7 @@ micro <- ess_raw |>
     hinctnta = dplyr::if_else(hinctnta < 1 | hinctnta > 10, NA_real_, as.numeric(hinctnta))
   ) |>
   dplyr::mutate(
-    survey_year = unname(round_to_year[as.character(essround)]),
+    survey_year = round_to_year[as.character(essround)],
     macro_year = survey_year,
     macro_year_lag = survey_year - 1L,
     country_code = toupper(country_code)

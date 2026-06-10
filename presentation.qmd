@@ -48,6 +48,7 @@ knitr::include_graphics("output/figures/happiness_distribution.png")
 ```
 
 ```{r}
+#| fig-alt: "Scatterplot of country-year mean happiness versus mean gini"
 knitr::include_graphics("output/figures/happiness_vs_gini_country_year.png")
 ```
 
@@ -69,6 +70,7 @@ models %>%
 - Heterogeneity checks by income and age interactions
 
 ```{r}
+#| fig-alt: "Leave-one-country-out gini coefficient stability plot"
 knitr::include_graphics("output/figures/leave_one_country_out_gini_coef.png")
 ```
 

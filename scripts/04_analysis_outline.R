@@ -78,6 +78,7 @@ m3 <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evma
 m4_fe <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar) + factor(country_code) + factor(year), data = analysis_data)
 
 # Robustness
+# Gini should be strictly positive for log transform; non-positive values are dropped for the log specification.
 analysis_data <- analysis_data |>
   dplyr::mutate(log_gini = dplyr::if_else(gini > 0, log(gini), NA_real_))
 m5_log <- stats::lm(happy ~ log_gini + unemployment_rate + agea + hinctnta + factor(evmar),
