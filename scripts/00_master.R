@@ -5,7 +5,7 @@
 suppressPackageStartupMessages({
   install.packages("pacman")
   library(pacman)
-  p_load("dplyr", "httr2", "readr", "countrycode", "jsonlite", "ggplot2", "tibble", "future", "future.apply", "naniar", "lubridate")
+  p_load("dplyr", "httr2", "readr", "countrycode", "jsonlite", "ggplot2", "tibble", "future", "future.apply", "naniar", "lubridate", "tidyr", "knitr")
 })
 
 # Build a consistent list of ISO2 country codes for all European countries.
