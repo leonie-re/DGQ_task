@@ -115,8 +115,7 @@ modelplot(model_list, coef_omit = "Intercept|factor\\(year\\)") +
 # -------------------------------------------------------------------------
 # 4. PREDICTED VALUES (MARGINAL EFFECTS PLOTS)
 # -------------------------------------------------------------------------
-# Let's predict how happiness changes across the actual range of your data
-# using your most complete multilevel models (m3_lin and m3_log).
+# Let's predict how happiness changes across the actual range of your data using your most complete multilevel models (m3_lin and m3_log).
 
 # --- Effect of Gini (Linear vs Log) ---
 plot_predictions(m3_lin, condition = "gini", re.form = NA) + 
