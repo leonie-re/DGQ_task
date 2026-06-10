@@ -75,7 +75,7 @@ ggplot2::ggsave("output/figures/happiness_distribution.png", p_hist_happy, width
 m1 <- stats::lm(happy ~ gini, data = analysis_data)
 m2 <- stats::lm(happy ~ gini + unemployment_rate, data = analysis_data)
 m3 <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar), data = analysis_data)
-m4_fe <- stats::lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar) + factor(country_code) + factor(year), data = analysis_data)
+m4_fe <- lm(happy ~ gini + unemployment_rate + agea + hinctnta + factor(evmar) + factor(country_code) + factor(year), data = analysis_data)
 
 # Robustness
 # Gini should be strictly positive for log transform; non-positive values are dropped for the log specification.
@@ -128,7 +128,7 @@ model_results <- dplyr::bind_rows(
   tidy_lm(m1, "M1_bivariate"),
   tidy_lm(m2, "M2_macro_control"),
   tidy_lm(m3, "M3_micro_macro_controls"),
-  tidy_lm(m4_fe, "M4_country_year_FE"),
+  #tidy_lm(m4_fe, "M4_country_year_FE"),
   tidy_lm(m5_log, "M5_log_gini"),
   tidy_lm(m6_quad, "M6_quadratic_gini"),
   tidy_lm(m7_lag, "M7_lagged_macro"),

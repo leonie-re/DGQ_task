@@ -1,0 +1,6 @@
+stage,description
+A,"Descriptive diagnostics produced (missingness, distributions, country-year summaries)"
+B,Bivariate inequality-happiness relationship estimated
+C,Multivariable models estimated with macro and micro controls
+D,Country/year fixed-effects model estimated for within-country temporal association
+Robustness,"Log, nonlinear, lagged, balanced-panel, leave-one-country-out, and heterogeneity checks estimated"
